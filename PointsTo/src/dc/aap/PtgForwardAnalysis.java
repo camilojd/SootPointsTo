@@ -59,12 +59,12 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 
 	@Override
 	protected void merge(Object in1, Object in2, Object out) {
-		((FlowSet<Value>) in1).union((FlowSet<Value>) in2, (FlowSet<Value>) out);
+		//in1.union(in2, out);
 	}
 
 	@Override
 	protected void copy(Object source, Object dest) {
-		((FlowSet<Value>)source).copy((FlowSet<Value>)dest);
+		//source.copy(dest);
 	}
 
 }
