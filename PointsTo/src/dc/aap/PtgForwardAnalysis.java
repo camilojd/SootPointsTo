@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
 import soot.*;
+import soot.tagkit.*;
 
 import org.apache.commons.lang3.builder.*;
 
@@ -35,10 +36,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		Unit d = (Unit)u;
 		
 		FlowInfo flowInfo = (FlowInfo)in;
-		flowInfo.nodes.add("pepe");
-		flowInfo.nodes.add("pepe2");
-		flowInfo.edges.add(new Edge("pepe", "f", "pepe2"));
-		System.out.println(flowInfo.edges);
 		
 		if (!d.getUseBoxes().isEmpty() && !d.getDefBoxes().isEmpty()) {
 			Value right = d.getUseBoxes().get(0).getValue();
@@ -47,7 +44,14 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			Stmt stmt = (Stmt)d;
 			if (stmt instanceof AssignStmt) {
 				if (right instanceof AnyNewExpr) {
-					System.out.println("Es un new!");
+					LineNumberTag lineTag = (LineNumberTag)d.getTag("LineNumberTag ");
+					int line = -7;
+					if (lineTag != null) {
+						line = lineTag.getLineNumber();
+					}
+					String vName = right.getType() + "_" + d.getJavaSourceStartLineNumber();
+					flowInfo.nodes.add(vName);
+					flowInfo.locals.put(left.toString(), vName);
 			    } else if ((left instanceof FieldRef) && (right instanceof Ref || right instanceof Local)) {
 					System.out.println("Es un assign x.f = y");
 				} else if ((left instanceof FieldRef) && (right instanceof Constant)) {
@@ -66,8 +70,8 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			// Esto, por algun motivo, no anda
 		}
 		
-		flowInfo.edges.remove((new Edge("pepe", "f", "pepe2")));
-		System.out.println(flowInfo.edges);
+		System.out.println(flowInfo.nodes);
+		System.out.println(flowInfo.locals);
 		
 		out = flowInfo;
 		
@@ -86,7 +90,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 
 	@Override
 	protected void copy(Object source, Object dest) {
-		//source.copy(dest);
+		((FlowInfo)source).copy((FlowInfo)dest);
 	}
 
 }
@@ -102,6 +106,14 @@ class FlowInfo {
 	public Set<Edge> edges;
 	public Map<String, String> locals;
 	public Set<String> wrongs;
+
+	public void copy(FlowInfo dest) {
+		dest.nodes = this.nodes;
+		//XXX: ANDA???????
+		dest.edges = this.edges;
+		dest.locals = this.locals;
+		dest.wrongs = this.wrongs;
+	}
 }
 
 class Edge {
