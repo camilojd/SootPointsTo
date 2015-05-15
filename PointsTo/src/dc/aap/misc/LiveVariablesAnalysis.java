@@ -40,7 +40,7 @@ class LiveVariablesAnalysis extends BackwardFlowAnalysis
         while (boxIt.hasNext()) {
             ValueBox box = (ValueBox) boxIt.next();
             Value value = box.getValue();
-            if (value instanceof Expr)
+            if (value instanceof Local)
                 dest.remove(value);
         }
 
