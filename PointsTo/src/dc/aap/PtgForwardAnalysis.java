@@ -5,12 +5,11 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
+
 import soot.*;
 import soot.tagkit.*;
 
 import org.apache.commons.lang3.builder.*;
-
-//import org.jgrapht.graph.DefaultEdge;
 
 import soot.jimple.*;
 import soot.Unit;
@@ -33,51 +32,112 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 
 	@Override
 	protected void flowThrough(Object in, Object u, Object out) {
+		
 		Unit d = (Unit)u;
+		FlowInfo out_flow = (FlowInfo) out;
+		FlowInfo in_flow = (FlowInfo) in;
+		in_flow.copy(out_flow);
+
+		// Si no es un assign statement, por ahora lo ignoramos
+		Stmt stmt = (Stmt)d;
+		if (!(stmt instanceof AssignStmt))
+			return;
+
+		// Si no tenemos lado iz o der, lo ignoramos
+		if (d.getUseBoxes().isEmpty() || d.getDefBoxes().isEmpty())
+			return;
 		
-		FlowInfo flowInfo = (FlowInfo)in;
+		// Sabemos que no esta vacia ninguna, por eso get(0) siempre
+		// anda y como es un java super simplificado el que analizamos,
+		// no hay nada mas
+		Value right = d.getUseBoxes().get(0).getValue();
+		Value left = d.getDefBoxes().get(0).getValue();
+		System.out.println("left: " + left);
+		System.out.println("right: " + right);
 		
-		if (!d.getUseBoxes().isEmpty() && !d.getDefBoxes().isEmpty()) {
-			Value right = d.getUseBoxes().get(0).getValue();
-			Value left = d.getDefBoxes().get(0).getValue();
-		
-			Stmt stmt = (Stmt)d;
-			if (stmt instanceof AssignStmt) {
-				if (right instanceof AnyNewExpr) {
-					LineNumberTag lineTag = (LineNumberTag)d.getTag("LineNumberTag ");
-					int line = -7;
-					if (lineTag != null) {
-						line = lineTag.getLineNumber();
-					}
-					String vName = right.getType() + "_" + d.getJavaSourceStartLineNumber();
-					flowInfo.nodes.add(vName);
-					flowInfo.locals.put(left.toString(), vName);
-			    } else if ((left instanceof FieldRef) && (right instanceof Ref || right instanceof Local)) {
-					System.out.println("Es un assign x.f = y");
-				} else if ((left instanceof FieldRef) && (right instanceof Constant)) {
-					System.out.println("Es un assign x.f = 5");
-				} else if ((left instanceof Ref || left instanceof Local) && (right instanceof FieldRef)) {
-					System.out.println("Es un assign x = y.f");
-				} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Ref || right instanceof Local)) {
-					System.out.println("Es un assign x = y");
-				} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Constant)) {
-					System.out.println("Es un assign x = cte");
-				} else if ((left instanceof Ref || left instanceof Local) && (right instanceof InvokeExpr)) {
-					System.out.println("Es un assign x = m()");
-				}
-			}// else if (stmt instanceof InvokeStmt)
-			//	System.out.println("Es un call()");
-			// Esto, por algun motivo, no anda
+		if (right instanceof AnyNewExpr) {
+			System.out.println("Es un new");
+			this.proc_new(in_flow, d, out_flow);
+		} else if ((left instanceof FieldRef) && (right instanceof Ref || right instanceof Local)) {
+			System.out.println("Es un assign x.f = y");
+		} else if ((left instanceof FieldRef) && (right instanceof Constant)) {
+			System.out.println("Es un assign x.f = 5");
+		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof FieldRef)) {
+			System.out.println("Es un assign x = y.f");
+			proc_ref_eq_field(in_flow, left, right, out_flow);
+		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Ref || right instanceof Local)) {
+			System.out.println("Es un assign x = y");
+			proc_ref_eq_ref(in_flow, left, right, out_flow);
+		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Constant)) {
+			System.out.println("Es un assign x = cte");
+			// Para constante hacemos lo mismo que con una referencia/local
+			proc_ref_eq_ref(in_flow, left, right, out_flow);
+		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof InvokeExpr)) {
+			System.out.println("Es un assign x = m()");
+			proc_wrongs(in_flow, left, right, out_flow);
 		}
 		
-		System.out.println(flowInfo.nodes);
-		System.out.println(flowInfo.locals);
+		System.out.println(out_flow.nodes);
+		System.out.println(out_flow.locals);
 		
-		out = flowInfo;
 		
 		System.out.println("================");
 	}
+	
+	protected void proc_new(FlowInfo in, Unit d, FlowInfo out) {
+		// La instruccion es del tipo:
+		//   p: x = new A;
 
+		Value right = d.getUseBoxes().get(0).getValue();
+		Value left = d.getDefBoxes().get(0).getValue();
+		
+		int line = -2;
+		LineNumberTag lineTag = (LineNumberTag)d.getTag("LineNumberTag ");
+		if (lineTag != null) {
+			line = lineTag.getLineNumber();
+		}
+		
+		// El nombre del nodo es de la forma: A_p
+		String vName = right.getType() + "_" + d.getJavaSourceStartLineNumber();		
+		out.nodes.add(vName);
+		
+		// La instruccion es del tipo:
+		//   p: x = new A;
+		// Entonces ponemos en el map de locals:
+		//   x --> {A_p}
+		HashSet<String> vNameSet = new HashSet<String>();
+		vNameSet.add(vName);
+		out.locals.put(left.toString(), vNameSet);
+	}
+	
+	protected void proc_ref_eq_ref(FlowInfo in, Value left, Value right, FlowInfo out) {
+		// Tenemos que hacer:
+		//   L'(left) = L(right)
+		//
+		// Y como put() sobre escribe left si ya estaba esa clave, no hace falta borrarlo si estaba
+		out.nodes.add(left.toString());
+		out.locals.put(left.toString(),out.locals.get(right.toString()));
+	}
+	
+	protected void proc_wrongs(FlowInfo in, Value left, Value right, FlowInfo out) {
+		out.wrongs.add(right.toString());
+	}
+
+	protected void proc_ref_eq_field(FlowInfo in, Value left, Value right, FlowInfo out) {
+		// Es una instruccion de la forma:
+		//   x = y.f
+		String x = left.toString();
+		String y = right.getUseBoxes().get(0).getValue().toString();
+		
+		// XXX: Como bosta saco el nombre del field ?
+		String f = right.getType().toString();
+		//f = right.getClass().toString();
+		System.out.println("proc_ref_eq_field:" + x);
+		System.out.println("proc_ref_eq_field:" + y);
+		System.out.println("proc_ref_eq_field:" + f);
+
+	}
+	
 	@Override
 	protected Object newInitialFlow() {
 		return new FlowInfo();
@@ -86,11 +146,34 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	@Override
 	protected void merge(Object in1, Object in2, Object out) {
 		//in1.union(in2, out);
+		System.out.println("Llamada a merge");
+		//return;
+		// Merge se usa con los if, que no hay en nuestro lenguaje, no ?
+		// Como que lo hicimos por deporte, parece :)
+		FlowInfo in1_flow = (FlowInfo) in1;
+		FlowInfo in2_flow = (FlowInfo) in2;
+		FlowInfo out_flow = (FlowInfo) out;
+		
+		out_flow.nodes = in1_flow.nodes;
+		out_flow.locals = in1_flow.locals;
+		out_flow.edges = in1_flow.edges;
+		out_flow.wrongs = in1_flow.wrongs;
+		
+		out_flow.nodes.addAll(in2_flow.nodes);
+		out_flow.locals.putAll(in2_flow.locals);
+		out_flow.edges.addAll(in2_flow.edges);
+		out_flow.wrongs.addAll(in2_flow.wrongs);
+		
+		// XXX: Hace falta ? O es todo referencia y es no-op ?
+		out = out_flow;
+		
 	}
 
 	@Override
 	protected void copy(Object source, Object dest) {
+		System.out.println("Llamada a copy()");
 		((FlowInfo)source).copy((FlowInfo)dest);
+		//((FlowInfo)dest).copy((FlowInfo)source);
 	}
 
 }
@@ -99,12 +182,12 @@ class FlowInfo {
 	FlowInfo() {
 		nodes = new HashSet<String>();
 		edges = new HashSet<Edge>();
-		locals = new HashMap<String, String>();
+		locals = new HashMap<String, Set<String> >();
 		wrongs = new HashSet<String>();
 	}
 	public Set<String> nodes;
 	public Set<Edge> edges;
-	public Map<String, String> locals;
+	public Map<String, Set<String> > locals;
 	public Set<String> wrongs;
 
 	public void copy(FlowInfo dest) {

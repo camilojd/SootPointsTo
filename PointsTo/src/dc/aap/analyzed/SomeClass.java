@@ -9,8 +9,8 @@ public class SomeClass {
 		y = x.f;
 		x.g = 5;
 		int z = x.g;
-		int t = x.m();
-		x.n();
+		//int t = x.m();
+		//x.n();
 	}
 	
 	public static class Class1 { 
