@@ -67,27 +67,28 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			}
 		}
 		
-		Value left = d.getDefBoxes().get(0).getValue();
+		List<ValueBox> def = d.getDefBoxes();
+		List<ValueBox> use = d.getUseBoxes();
 		
 		Value expr = d.getUseBoxes().get(0).getValue();
 		if (expr instanceof AnyNewExpr) {
 			System.out.println("Es un new");
-		//	this.proc_new(in_flow, d, out_flow);
+			this.proc_new(in_flow, d, out_flow);
 		} else if (expr instanceof InvokeExpr) {
 			System.out.println("Es un assign x = m()");
-			//	proc_wrongs(in_flow, left, right, out_flow);
+			proc_wrongs(in_flow, def, use, out_flow);
 		} else if (leftField && rightField) {
 			System.out.println("Es un assign x.f = y.f");
-		//	proc_ref_eq_ref(in_flow, left, right, out_flow);
+			proc_ref_eq_ref(in_flow, def, use, out_flow);
 		} else if (leftField) {
 			System.out.println("Es un assign x.f = 5 o y");
-		//	proc_field_eq_ref(in_flow, left, right, out_flow);
+			proc_field_eq_ref(in_flow, def, use, out_flow);
 		} else if (rightField) {
 			System.out.println("Es un assign x = y.f");
-		//	proc_ref_eq_field(in_flow, left, right, out_flow);
+			proc_ref_eq_field(in_flow, def, use, out_flow);
 		} else if (!leftField && !rightField) {
 			System.out.println("Es un assign x = y o cte");
-		//	proc_ref_eq_ref(in_flow, left, right, out_flow);
+			proc_ref_eq_ref(in_flow, def, use, out_flow);
 		}
 		
 		System.out.println("Nodes: " + out_flow.nodes);
@@ -124,22 +125,28 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		out.locals.put(left.toString(), vNameSet);
 	}
 	
-	protected void proc_ref_eq_ref(FlowInfo in, Value left, Value right, FlowInfo out) {
+	protected void proc_ref_eq_ref(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
 		// Tenemos que hacer:
 		//   L'(left) = L(right)
 		//
 		// Y como put() sobre escribe left si ya estaba esa clave, no hace falta borrarlo si estaba
 		//out.nodes.add(left.toString());
+		Value left = left_l.get(0).getValue();
+		Value right = right_l.get(0).getValue();
 		out.locals.put(left.toString(),out.locals.get(right.toString()));
 	}
 	
-	protected void proc_wrongs(FlowInfo in, Value left, Value right, FlowInfo out) {
+	protected void proc_wrongs(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
+		Value left = left_l.get(0).getValue();
+		Value right = right_l.get(0).getValue();
 		out.wrongs.add(right.toString());
 	}
 
-	protected void proc_ref_eq_field(FlowInfo in, Value left, Value right, FlowInfo out) {
+	protected void proc_ref_eq_field(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
 		// Es una instruccion de la forma:
 		//   x = y.f
+		Value left = left_l.get(0).getValue();
+		Value right = right_l.get(0).getValue();
 		String x = left.toString();
 		String y = right.getUseBoxes().get(0).getValue().toString();
 		
@@ -166,9 +173,11 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 
 	}
 	
-	protected void proc_field_eq_ref(FlowInfo in, Value left, Value right, FlowInfo out) {
+	protected void proc_field_eq_ref(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
 		// Es una instruccion de la forma:
 		//   x.f = y
+		Value left = left_l.get(0).getValue();
+		Value right = right_l.get(1).getValue();
 		String x = left.getUseBoxes().get(0).getValue().toString();
 		String y = right.toString();
 		
