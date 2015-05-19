@@ -52,50 +52,59 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		// anda y como es un java super simplificado el que analizamos,
 		// no hay nada mas
 		Value right;
-		Boolean rightRef = false;
-		Boolean leftRef = false;
+		boolean rightField = false;
+		boolean leftField = false;
 		right = d.getUseBoxes().get(0).getValue();
 		System.out.println("XXX:d.getUseBoxes() " + d.getUseBoxes());
+		System.out.println("XXX:d.getDefBoxes() " + d.getDefBoxes());
+
 		for (ValueBox i: d.getUseBoxes()) {
-			if (i instanceof FieldRef)
-				rightRef = true;
+			if (i.getValue() instanceof FieldRef) {
+				rightField = true;
+				right = d.getUseBoxes().get(1).getValue();
+				System.out.println("XXXXXX: encontre rightField");
+			}
 		}
 		
 		for (ValueBox i: d.getDefBoxes()) {
-			if (i instanceof FieldRef)
-				leftRef = true;
+			if (i.getValue() instanceof FieldRef) {
+				leftField = true;
+				System.out.println("XXXXXX: encontre leftField");
+			}
 		}
 		
 		Value left = d.getDefBoxes().get(0).getValue();
 		System.out.println("left: " + left);
 		System.out.println("right: " + right);
-				
+
 		if (right instanceof AnyNewExpr) {
 			System.out.println("Es un new");
-			this.proc_new(in_flow, d, out_flow);
-		} else if ((left instanceof FieldRef) && (right instanceof Constant)) {
+		//	this.proc_new(in_flow, d, out_flow);
+		} else if (leftField && (right instanceof Constant)) {
 			System.out.println("Es un assign x.f = 5");
-			proc_field_eq_ref(in_flow, left, right, out_flow);
-		} else if ((left instanceof FieldRef) && (right instanceof Ref || right instanceof Local)) {
+		//	proc_field_eq_ref(in_flow, left, right, out_flow);
+		} else if (leftField && (right instanceof Ref || right instanceof Local)) {
 			System.out.println("Es un assign x.f = y");
-			proc_field_eq_ref(in_flow, left, right, out_flow);
-		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof FieldRef)) {
+		//	proc_field_eq_ref(in_flow, left, right, out_flow);
+		} else if ((left instanceof Ref || left instanceof Local) && rightField) {
 			System.out.println("Es un assign x = y.f");
-			proc_ref_eq_field(in_flow, left, right, out_flow);
-		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Ref || right instanceof Local)) {
+		//	proc_ref_eq_field(in_flow, left, right, out_flow);
+		} else if (leftField && rightField) {
+			System.out.println("Es un assign x.f = y.f");
+		//	boolean a = right instanceof Local;
+		//	boolean b = right instanceof Ref;
+		//	System.out.println("right es loca?" + a);
+		//	System.out.println("right es Ref?" + b);
+		//	proc_ref_eq_ref(in_flow, left, right, out_flow);
+		} else if (!leftField && !rightField) {
 			System.out.println("Es un assign x = y");
-			boolean a = right instanceof Local;
-			boolean b = right instanceof Ref;
-			System.out.println("right es loca?" + a);
-			System.out.println("right es Ref?" + b);
-			proc_ref_eq_ref(in_flow, left, right, out_flow);
 		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Constant)) {
 			System.out.println("Es un assign x = cte");
 			// Para constante hacemos lo mismo que con una referencia/local
-			proc_ref_eq_ref(in_flow, left, right, out_flow);
+		//	proc_ref_eq_ref(in_flow, left, right, out_flow);
 		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof InvokeExpr)) {
 			System.out.println("Es un assign x = m()");
-			proc_wrongs(in_flow, left, right, out_flow);
+		//	proc_wrongs(in_flow, left, right, out_flow);
 		}
 		
 		System.out.println("Nodes: " + out_flow.nodes);
