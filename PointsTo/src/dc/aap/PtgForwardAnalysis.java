@@ -55,13 +55,18 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		System.out.println("left: " + left);
 		System.out.println("right: " + right);
 		
+		System.out.println("XXX:right es: " + right.getClass());
+		System.out.println("XXX:left es: " + left.getClass());
+		
 		if (right instanceof AnyNewExpr) {
 			System.out.println("Es un new");
 			this.proc_new(in_flow, d, out_flow);
-		} else if ((left instanceof FieldRef) && (right instanceof Ref || right instanceof Local)) {
-			System.out.println("Es un assign x.f = y");
 		} else if ((left instanceof FieldRef) && (right instanceof Constant)) {
 			System.out.println("Es un assign x.f = 5");
+			proc_field_eq_ref(in_flow, left, right, out_flow);
+		} else if ((left instanceof FieldRef) && (right instanceof Ref || right instanceof Local)) {
+			System.out.println("Es un assign x.f = y");
+			proc_field_eq_ref(in_flow, left, right, out_flow);
 		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof FieldRef)) {
 			System.out.println("Es un assign x = y.f");
 			proc_ref_eq_field(in_flow, left, right, out_flow);
@@ -77,8 +82,9 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			proc_wrongs(in_flow, left, right, out_flow);
 		}
 		
-		System.out.println(out_flow.nodes);
-		System.out.println(out_flow.locals);
+		System.out.println("Nodes: " + out_flow.nodes);
+		System.out.println("Locals: " + out_flow.locals);
+		System.out.println("Edges: " + out_flow.edges);
 		
 		
 		System.out.println("================");
@@ -129,13 +135,57 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String x = left.toString();
 		String y = right.getUseBoxes().get(0).getValue().toString();
 		
-		// XXX: Como bosta saco el nombre del field ?
-		System.out.println("es f?:" + right.toString());//;.split("<.* "));
+		// XXX: Parseamos el string para sacar el nombre del field.
+		// Es un asco y puede fallar en otras versiones, pero al menos
+		// nos deja avanzar con el tp
+		String[] f_splice = right.toString().split(" +");
+		String f = f_splice[f_splice.length - 1];
+		f = f.substring(0, f.length() - 1);
+		System.out.println("es f?: " + f);
+
 		//f = right.getClass().toString();
 		System.out.println("proc_ref_eq_field:" + x);
 		System.out.println("proc_ref_eq_field:" + y);
-		//System.out.println("proc_ref_eq_field:" + f);
+		System.out.println("proc_ref_eq_field:" + f);
+		
+		// Borramos lo que sea que tenga x
+		in.locals.put(x, new HashSet<String>());
+		
+		for (String a : in.locals.get(y)){
+			for (Edge n : in.edges) {
+				if (n.vSource.equals(a) && n.field.equals(f))
+					out.locals.get(x).add(n.vTarget);
+			}
+		}
 
+	}
+	
+	protected void proc_field_eq_ref(FlowInfo in, Value left, Value right, FlowInfo out) {
+		// Es una instruccion de la forma:
+		//   x.f = y
+		String x = left.getUseBoxes().get(0).getValue().toString();
+		String y = right.toString();
+		
+		// XXX: Parseamos el string para sacar el nombre del field.
+		// Es un asco y puede fallar en otras versiones, pero al menos
+		// nos deja avanzar con el tp
+		String[] f_splice = left.toString().split(" +");
+		String f = f_splice[f_splice.length - 1];
+		f = f.substring(0, f.length() - 1);
+		System.out.println("es f?: " + f);
+
+		//f = right.getClass().toString();
+		System.out.println("proc_field_eq_ref x:" + x);
+		System.out.println("proc_field_eq_ref y:" + y);
+		System.out.println("proc_field_eq_ref f:" + f);
+
+		
+		for (String n : in.locals.get(y)) {
+			for (String a : in.locals.get(x)) {
+				Edge e = new Edge(a, f, n);
+				out.edges.add(e);
+			}
+		}
 	}
 	
 	@Override
@@ -237,6 +287,6 @@ class Edge {
 
 	@Override
 	public String toString() {
-		return vSource + " " + field  + " " + vTarget ;  
+		return "Edge:{" + vSource + "-->" + field  + "-->" + vTarget + "}" ;  
 	}
 }
