@@ -21,6 +21,7 @@ public class StandaloneMain {
 		c.setApplicationClass();
 		SootMethod m = c.getMethodByName("entryPoint");
 		soot.options.Options.v().set_keep_line_number(true);
+		//soot.options.Options.v().print_tags_in_output();
 		Scene.v().loadNecessaryClasses();
 		
 		Body b = m.retrieveActiveBody();

@@ -130,11 +130,11 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String y = right.getUseBoxes().get(0).getValue().toString();
 		
 		// XXX: Como bosta saco el nombre del field ?
-		String f = right.getType().toString();
+		System.out.println("es f?:" + right.toString());//;.split("<.* "));
 		//f = right.getClass().toString();
 		System.out.println("proc_ref_eq_field:" + x);
 		System.out.println("proc_ref_eq_field:" + y);
-		System.out.println("proc_ref_eq_field:" + f);
+		//System.out.println("proc_ref_eq_field:" + f);
 
 	}
 	
