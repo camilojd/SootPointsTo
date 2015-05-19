@@ -10,7 +10,7 @@ public class SomeClass {
 		y = x.campoLargo_y_rar0;
 		x.g = 5;
 		int a = x.g;
-		//int t = x.m();
+		int t = x.m();
 		//x.n();
 	}
 	
