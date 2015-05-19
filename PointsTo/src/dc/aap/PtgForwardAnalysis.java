@@ -1,6 +1,7 @@
 package dc.aap;
 
 import java.util.Dictionary;
+import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
@@ -50,14 +51,25 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		// Sabemos que no esta vacia ninguna, por eso get(0) siempre
 		// anda y como es un java super simplificado el que analizamos,
 		// no hay nada mas
-		Value right = d.getUseBoxes().get(0).getValue();
+		Value right;
+		Boolean rightRef = false;
+		Boolean leftRef = false;
+		right = d.getUseBoxes().get(0).getValue();
+		System.out.println("XXX:d.getUseBoxes() " + d.getUseBoxes());
+		for (ValueBox i: d.getUseBoxes()) {
+			if (i instanceof FieldRef)
+				rightRef = true;
+		}
+		
+		for (ValueBox i: d.getDefBoxes()) {
+			if (i instanceof FieldRef)
+				leftRef = true;
+		}
+		
 		Value left = d.getDefBoxes().get(0).getValue();
 		System.out.println("left: " + left);
 		System.out.println("right: " + right);
-		
-		System.out.println("XXX:right es: " + right.getClass());
-		System.out.println("XXX:left es: " + left.getClass());
-		
+				
 		if (right instanceof AnyNewExpr) {
 			System.out.println("Es un new");
 			this.proc_new(in_flow, d, out_flow);
@@ -72,6 +84,10 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			proc_ref_eq_field(in_flow, left, right, out_flow);
 		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Ref || right instanceof Local)) {
 			System.out.println("Es un assign x = y");
+			boolean a = right instanceof Local;
+			boolean b = right instanceof Ref;
+			System.out.println("right es loca?" + a);
+			System.out.println("right es Ref?" + b);
 			proc_ref_eq_ref(in_flow, left, right, out_flow);
 		} else if ((left instanceof Ref || left instanceof Local) && (right instanceof Constant)) {
 			System.out.println("Es un assign x = cte");
@@ -121,7 +137,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		//   L'(left) = L(right)
 		//
 		// Y como put() sobre escribe left si ya estaba esa clave, no hace falta borrarlo si estaba
-		out.nodes.add(left.toString());
+		//out.nodes.add(left.toString());
 		out.locals.put(left.toString(),out.locals.get(right.toString()));
 	}
 	
@@ -141,9 +157,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String[] f_splice = right.toString().split(" +");
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
-		System.out.println("es f?: " + f);
 
-		//f = right.getClass().toString();
 		System.out.println("proc_ref_eq_field:" + x);
 		System.out.println("proc_ref_eq_field:" + y);
 		System.out.println("proc_ref_eq_field:" + f);
@@ -172,13 +186,13 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String[] f_splice = left.toString().split(" +");
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
-		System.out.println("es f?: " + f);
 
-		//f = right.getClass().toString();
 		System.out.println("proc_field_eq_ref x:" + x);
 		System.out.println("proc_field_eq_ref y:" + y);
 		System.out.println("proc_field_eq_ref f:" + f);
 
+		if ((!in.locals.containsKey(y)) || (!in.locals.containsKey(x)))
+			return;
 		
 		for (String n : in.locals.get(y)) {
 			for (String a : in.locals.get(x)) {
