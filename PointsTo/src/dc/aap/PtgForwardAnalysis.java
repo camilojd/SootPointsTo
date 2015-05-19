@@ -1,5 +1,7 @@
 package dc.aap;
 
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.Dictionary;
 import java.util.List;
 import java.util.Set;
@@ -94,7 +96,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		System.out.println("Nodes: " + out_flow.nodes);
 		System.out.println("Locals: " + out_flow.locals);
 		System.out.println("Edges: " + out_flow.edges);
-		
+		out_flow.toDotFile();
 		
 		System.out.println("================");
 	}
@@ -261,6 +263,29 @@ class FlowInfo {
 		dest.edges = this.edges;
 		dest.locals = this.locals;
 		dest.wrongs = this.wrongs;
+	}
+	public void toDotFile() {
+		PrintWriter writer;
+		try {
+			writer = new PrintWriter("file.dot");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
+		}
+		writer.println("digraph {");
+		
+		for (Map.Entry<String, Set<String>> local : locals.entrySet()) {
+			for (String node : local.getValue() )
+			writer.println("\"" + local.getKey() + "\"" + "->" + "\"" + node + "\"");
+		}
+		
+		for(Edge e : edges) {
+			writer.println("\"" + e.vSource + "\"" + "->" + "\"" + e.vTarget + "\"" + "[label=" + "\"" + e.field + "\"" + "]");
+		}
+		
+		writer.println("}");
+		writer.close();
 	}
 }
 
