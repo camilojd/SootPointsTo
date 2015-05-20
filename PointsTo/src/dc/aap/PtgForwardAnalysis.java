@@ -28,6 +28,12 @@ import soot.toolkits.scalar.ForwardFlowAnalysis;
 
 public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	
+	private int counter = 0;
+	public String GenerateId() {
+		counter++;
+		return String.valueOf(counter);
+	}
+	
 	public PtgForwardAnalysis(DirectedGraph<Unit> graph) {
 		super(graph);
 		doAnalysis();
@@ -168,14 +174,14 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		
 		// R' = R U { (n,f,ln) | n in L(y) }
 		for (String n : in.locals.get(y)){
-			String ln = "l_" + n;
+			String ln = "l_" + GenerateId() + "_" + n;
 			out.nodes.add(ln);
 			Edge e = new Edge(n, f, ln);
 			out.r_edges.add(e);
 		}
 		
 		// L'(x) = { ln }
-		String ln = "l_" + x;
+		String ln = "l_" + GenerateId() + "_" + x;
 		out.nodes.add(ln);
 		out.locals.get(x).clear();
 		out.locals.get(x).add(ln);
