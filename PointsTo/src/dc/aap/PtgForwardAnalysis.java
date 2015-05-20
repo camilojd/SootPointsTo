@@ -46,64 +46,74 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		FlowInfo out_flow = (FlowInfo) out;
 		FlowInfo in_flow = (FlowInfo) in;
 		in_flow.copy(out_flow);
-
-		// Si no es un assign statement, por ahora lo ignoramos
-		Stmt stmt = (Stmt)d;
-		if (!(stmt instanceof AssignStmt))
-			return;
-
-		// Si no tenemos lado iz o der, lo ignoramos
-		if (d.getUseBoxes().isEmpty() || d.getDefBoxes().isEmpty())
-			return;
 		
-		boolean rightField = false;
-		boolean leftField = false;
-		//System.out.println("XXX:d.getUseBoxes() " + d.getUseBoxes());
-		//System.out.println("XXX:d.getDefBoxes() " + d.getDefBoxes());
+		if (d instanceof IdentityStmt) {
+			// i0 := @parameter0: int;
+			// Cuando le da nombre a los parametros de la funcion.
+			// Def: JimpleLocalBox(i0), Use: IdentityRefBox(@parameter0: int)
+			// Creo que solo interesa el Def.
+			String formalParam = d.getDefBoxes().get(0).getValue().toString();
+			String paramNode = "parameter_" + formalParam;
+			out_flow.nodes.add(paramNode);
+			Set<String> s = new HashSet<String>();
+			s.add(paramNode);
+			out_flow.locals.put(formalParam, s);
+		}
+				
+		if (d instanceof AssignStmt) {
+			// Si no tenemos lado iz o der, lo ignoramos
+			if (d.getUseBoxes().isEmpty() || d.getDefBoxes().isEmpty())
+				return;
+			
+			boolean rightField = false;
+			boolean leftField = false;
+			//System.out.println("XXX:d.getUseBoxes() " + d.getUseBoxes());
+			//System.out.println("XXX:d.getDefBoxes() " + d.getDefBoxes());
 
-		for (ValueBox i: d.getUseBoxes()) {
-			if (i.getValue() instanceof FieldRef) {
-				rightField = true;
-				//System.out.println("XXXXXX: encontre rightField");
+			for (ValueBox i: d.getUseBoxes()) {
+				if (i.getValue() instanceof FieldRef) {
+					rightField = true;
+					//System.out.println("XXXXXX: encontre rightField");
+				}
 			}
-		}
-		
-		for (ValueBox i: d.getDefBoxes()) {
-			if (i.getValue() instanceof FieldRef) {
-				leftField = true;
-				//System.out.println("XXXXXX: encontre leftField");
+			
+			for (ValueBox i: d.getDefBoxes()) {
+				if (i.getValue() instanceof FieldRef) {
+					leftField = true;
+					//System.out.println("XXXXXX: encontre leftField");
+				}
 			}
+			
+			List<ValueBox> def = d.getDefBoxes();
+			List<ValueBox> use = d.getUseBoxes();
+			
+			Value expr = d.getUseBoxes().get(0).getValue();
+			if (expr instanceof AnyNewExpr) {
+				System.out.println("Es un new");
+				this.proc_new(in_flow, d, out_flow);
+			} else if (expr instanceof InvokeExpr) {
+				System.out.println("Es un assign x = m()");
+				proc_wrongs(in_flow, def, use, out_flow);
+			} else if (leftField && rightField) {
+				System.out.println("Es un assign x.f = y.f");
+				proc_ref_eq_ref(in_flow, def, use, out_flow);
+			} else if (leftField) {
+				System.out.println("Es un assign x.f = 5 o y");
+				proc_field_eq_ref(in_flow, def, use, out_flow);
+			} else if (rightField) {
+				System.out.println("Es un assign x = y.f");
+				proc_ref_eq_field(in_flow, def, use, out_flow);
+			} else if (!leftField && !rightField) {
+				System.out.println("Es un assign x = y o cte");
+				proc_ref_eq_ref(in_flow, def, use, out_flow);
+			}
+			
+			//System.out.println("Nodes: " + out_flow.nodes);
+			//System.out.println("Locals: " + out_flow.locals);
+			//System.out.println("Edges: " + out_flow.edges);
 		}
 		
-		List<ValueBox> def = d.getDefBoxes();
-		List<ValueBox> use = d.getUseBoxes();
-		
-		Value expr = d.getUseBoxes().get(0).getValue();
-		if (expr instanceof AnyNewExpr) {
-			System.out.println("Es un new");
-			this.proc_new(in_flow, d, out_flow);
-		} else if (expr instanceof InvokeExpr) {
-			System.out.println("Es un assign x = m()");
-			proc_wrongs(in_flow, def, use, out_flow);
-		} else if (leftField && rightField) {
-			System.out.println("Es un assign x.f = y.f");
-			proc_ref_eq_ref(in_flow, def, use, out_flow);
-		} else if (leftField) {
-			System.out.println("Es un assign x.f = 5 o y");
-			proc_field_eq_ref(in_flow, def, use, out_flow);
-		} else if (rightField) {
-			System.out.println("Es un assign x = y.f");
-			proc_ref_eq_field(in_flow, def, use, out_flow);
-		} else if (!leftField && !rightField) {
-			System.out.println("Es un assign x = y o cte");
-			proc_ref_eq_ref(in_flow, def, use, out_flow);
-		}
-		
-		//System.out.println("Nodes: " + out_flow.nodes);
-		//System.out.println("Locals: " + out_flow.locals);
-		//System.out.println("Edges: " + out_flow.edges);
-		out_flow.toDotFile();
-		
+		out_flow.toDotFile();	
 		System.out.println("================");
 	}
 	
@@ -183,7 +193,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		}
 		
 		// L'(x) = { ln }
-		//out.locals.get(x).clear();
 		out.locals.get(x).add(ln);
 		
 		//Codigo Ejercicio 1
