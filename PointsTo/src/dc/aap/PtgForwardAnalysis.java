@@ -2,29 +2,19 @@ package dc.aap;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.util.Dictionary;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
-
 import soot.*;
 import soot.tagkit.*;
-
 import org.apache.commons.lang3.builder.*;
-
 import soot.jimple.*;
 import soot.Unit;
 import soot.Value;
-//import soot.ValueBox;
 import soot.toolkits.graph.DirectedGraph;
-//import soot.toolkits.scalar.ArraySparseSet;
-//import soot.toolkits.scalar.FlowSet;
 import soot.toolkits.scalar.ForwardFlowAnalysis;
-
-//import org.jgrapht.*;
-//import org.jgrapht.graph.*;
 
 public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	
@@ -52,12 +42,25 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			// Cuando le da nombre a los parametros de la funcion.
 			// Def: JimpleLocalBox(i0), Use: IdentityRefBox(@parameter0: int)
 			// Creo que solo interesa el Def.
+			System.out.println("Es un parametro");
 			String formalParam = d.getDefBoxes().get(0).getValue().toString();
 			String paramNode = "parameter_" + formalParam;
 			out_flow.nodes.add(paramNode);
 			Set<String> s = new HashSet<String>();
 			s.add(paramNode);
 			out_flow.locals.put(formalParam, s);
+		}
+		
+		if (d instanceof InvokeStmt) {
+			System.out.println("TODO: Es una invocacion");
+		}
+		
+		if (d instanceof ReturnVoidStmt) {
+			System.out.println("TODO: Es un return void");
+		}
+		
+		if (d instanceof ReturnStmt) {
+			System.out.println("TODO: Es un return");
 		}
 				
 		if (d instanceof AssignStmt) {
@@ -107,10 +110,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 				System.out.println("Es un assign x = y o cte");
 				proc_ref_eq_ref(in_flow, def, use, out_flow);
 			}
-			
-			//System.out.println("Nodes: " + out_flow.nodes);
-			//System.out.println("Locals: " + out_flow.locals);
-			//System.out.println("Edges: " + out_flow.edges);
 		}
 		
 		out_flow.toDotFile();	
@@ -118,9 +117,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	}
 	
 	protected void proc_new(FlowInfo in, Unit d, FlowInfo out) {
-		// La instruccion es del tipo:
-		//   p: x = new A;
-
 		Value right = d.getUseBoxes().get(0).getValue();
 		Value left = d.getDefBoxes().get(0).getValue();
 		
@@ -144,11 +140,8 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	}
 	
 	protected void proc_ref_eq_ref(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
-		// Tenemos que hacer:
-		//   L'(left) = L(right)
-		//
-		// Y como put() sobre escribe left si ya estaba esa clave, no hace falta borrarlo si estaba
-		//out.nodes.add(left.toString());
+		// Tenemos que hacer L'(left) = L(right)
+		// Y como put() sobre escribe left si ya estaba esa clave, no hace falta borrarlo
 		Value left = left_l.get(0).getValue();
 		Value right = right_l.get(0).getValue();
 		out.locals.put(left.toString(),out.locals.get(right.toString()));
@@ -161,8 +154,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	}
 
 	protected void proc_ref_eq_field(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
-		// Es una instruccion de la forma:
-		//   x = y.f
+		// Es una instruccion de la forma: x = y.f
 		Value left = left_l.get(0).getValue();
 		Value right = right_l.get(0).getValue();
 		String x = left.toString();
@@ -175,10 +167,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
 
-		//System.out.println("proc_ref_eq_field:" + x);
-		//System.out.println("proc_ref_eq_field:" + y);
-		//System.out.println("proc_ref_eq_field:" + f);
-		
 		// Borramos lo que sea que tenga x
 		in.locals.put(x, new HashSet<String>());
 		
@@ -193,21 +181,11 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		}
 		
 		// L'(x) = { ln }
-		out.locals.get(x).add(ln);
-		
-		//Codigo Ejercicio 1
-		//for (String a : in.locals.get(y)){
-		//	for (Edge n : in.edges) {
-		//		if (n.vSource.equals(a) && n.field.equals(f))
-		//			out.locals.get(x).add(n.vTarget);
-		//	}
-		//}
-		// FIN CE1
+		out.locals.get(x).add(ln);		
 	}
 	
 	protected void proc_field_eq_ref(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
-		// Es una instruccion de la forma:
-		//   x.f = y
+		// Es una instruccion de la forma: x.f = y
 		Value left = left_l.get(0).getValue();
 		Value right = right_l.get(1).getValue();
 		String x = left.getUseBoxes().get(0).getValue().toString();
@@ -219,10 +197,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String[] f_splice = left.toString().split(" +");
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
-
-		//System.out.println("proc_field_eq_ref x:" + x);
-		//System.out.println("proc_field_eq_ref y:" + y);
-		//System.out.println("proc_field_eq_ref f:" + f);
 
 		if ((!in.locals.containsKey(y)) || (!in.locals.containsKey(x)))
 			return;
@@ -242,9 +216,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 
 	@Override
 	protected void merge(Object in1, Object in2, Object out) {
-		//in1.union(in2, out);
-		//System.out.println("Llamada a merge");
-		//return;
 		// Merge se usa con los if, que no hay en nuestro lenguaje, no ?
 		// Como que lo hicimos por deporte, parece :)
 		FlowInfo in1_flow = (FlowInfo) in1;
@@ -263,14 +234,11 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		
 		// XXX: Hace falta ? O es todo referencia y es no-op ?
 		out = out_flow;
-		
 	}
 
 	@Override
 	protected void copy(Object source, Object dest) {
-		//System.out.println("Llamada a copy()");
 		((FlowInfo)source).copy((FlowInfo)dest);
-		//((FlowInfo)dest).copy((FlowInfo)source);
 	}
 
 }
@@ -338,8 +306,7 @@ class Edge {
 	
 	@Override
     public int hashCode() {
-        return new HashCodeBuilder(17, 31). // two randomly chosen prime numbers
-            // if deriving: appendSuper(super.hashCode()).
+        return new HashCodeBuilder(17, 31).
             append(vSource).
             append(vTarget).
             append(field).
@@ -355,7 +322,6 @@ class Edge {
 
         Edge edge = (Edge) obj;
         return new EqualsBuilder().
-            // if deriving: appendSuper(super.equals(obj)).
             append(vTarget, edge.vTarget).
             append(vSource, edge.vSource).
             append(field, edge.field).
@@ -364,6 +330,6 @@ class Edge {
 
 	@Override
 	public String toString() {
-		return "Edge:{" + vSource + "-->" + field  + "-->" + vTarget + "}" ;  
+		return "(" + vSource + "," + field  + "," + vTarget + ")" ;  
 	}
 }
