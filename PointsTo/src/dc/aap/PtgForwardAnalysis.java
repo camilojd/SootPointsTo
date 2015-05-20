@@ -58,20 +58,20 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		
 		boolean rightField = false;
 		boolean leftField = false;
-		System.out.println("XXX:d.getUseBoxes() " + d.getUseBoxes());
-		System.out.println("XXX:d.getDefBoxes() " + d.getDefBoxes());
+		//System.out.println("XXX:d.getUseBoxes() " + d.getUseBoxes());
+		//System.out.println("XXX:d.getDefBoxes() " + d.getDefBoxes());
 
 		for (ValueBox i: d.getUseBoxes()) {
 			if (i.getValue() instanceof FieldRef) {
 				rightField = true;
-				System.out.println("XXXXXX: encontre rightField");
+				//System.out.println("XXXXXX: encontre rightField");
 			}
 		}
 		
 		for (ValueBox i: d.getDefBoxes()) {
 			if (i.getValue() instanceof FieldRef) {
 				leftField = true;
-				System.out.println("XXXXXX: encontre leftField");
+				//System.out.println("XXXXXX: encontre leftField");
 			}
 		}
 		
@@ -99,9 +99,9 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			proc_ref_eq_ref(in_flow, def, use, out_flow);
 		}
 		
-		System.out.println("Nodes: " + out_flow.nodes);
-		System.out.println("Locals: " + out_flow.locals);
-		System.out.println("Edges: " + out_flow.edges);
+		//System.out.println("Nodes: " + out_flow.nodes);
+		//System.out.println("Locals: " + out_flow.locals);
+		//System.out.println("Edges: " + out_flow.edges);
 		out_flow.toDotFile();
 		
 		System.out.println("================");
@@ -165,25 +165,25 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
 
-		System.out.println("proc_ref_eq_field:" + x);
-		System.out.println("proc_ref_eq_field:" + y);
-		System.out.println("proc_ref_eq_field:" + f);
+		//System.out.println("proc_ref_eq_field:" + x);
+		//System.out.println("proc_ref_eq_field:" + y);
+		//System.out.println("proc_ref_eq_field:" + f);
 		
 		// Borramos lo que sea que tenga x
 		in.locals.put(x, new HashSet<String>());
 		
+		// Para ln "libre".
+		String ln = "l_" + GenerateId() + "_" + y;
+		out.nodes.add(ln);
+
 		// R' = R U { (n,f,ln) | n in L(y) }
 		for (String n : in.locals.get(y)){
-			String ln = "l_" + GenerateId() + "_" + n;
-			out.nodes.add(ln);
 			Edge e = new Edge(n, f, ln);
 			out.r_edges.add(e);
 		}
 		
 		// L'(x) = { ln }
-		String ln = "l_" + GenerateId() + "_" + x;
-		out.nodes.add(ln);
-		out.locals.get(x).clear();
+		//out.locals.get(x).clear();
 		out.locals.get(x).add(ln);
 		
 		//Codigo Ejercicio 1
@@ -193,7 +193,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		//			out.locals.get(x).add(n.vTarget);
 		//	}
 		//}
-
+		// FIN CE1
 	}
 	
 	protected void proc_field_eq_ref(FlowInfo in, List<ValueBox> left_l, List<ValueBox> right_l, FlowInfo out) {
@@ -211,9 +211,9 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
 
-		System.out.println("proc_field_eq_ref x:" + x);
-		System.out.println("proc_field_eq_ref y:" + y);
-		System.out.println("proc_field_eq_ref f:" + f);
+		//System.out.println("proc_field_eq_ref x:" + x);
+		//System.out.println("proc_field_eq_ref y:" + y);
+		//System.out.println("proc_field_eq_ref f:" + f);
 
 		if ((!in.locals.containsKey(y)) || (!in.locals.containsKey(x)))
 			return;
@@ -234,7 +234,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	@Override
 	protected void merge(Object in1, Object in2, Object out) {
 		//in1.union(in2, out);
-		System.out.println("Llamada a merge");
+		//System.out.println("Llamada a merge");
 		//return;
 		// Merge se usa con los if, que no hay en nuestro lenguaje, no ?
 		// Como que lo hicimos por deporte, parece :)
@@ -259,7 +259,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 
 	@Override
 	protected void copy(Object source, Object dest) {
-		System.out.println("Llamada a copy()");
+		//System.out.println("Llamada a copy()");
 		((FlowInfo)source).copy((FlowInfo)dest);
 		//((FlowInfo)dest).copy((FlowInfo)source);
 	}

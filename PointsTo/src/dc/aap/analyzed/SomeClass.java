@@ -1,7 +1,7 @@
 package dc.aap.analyzed;
 
 public class SomeClass {
-	public static void entryPoint() {
+	public static void entryPoint(int formalPar1, Class2 formalPar2) {
 		Class1 x = new Class1();
 		Class1 y = new Class1();
 		Class2 z = new Class2();
