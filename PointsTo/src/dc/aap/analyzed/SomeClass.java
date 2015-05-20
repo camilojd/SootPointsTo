@@ -10,7 +10,9 @@ public class SomeClass {
 		y = x.campoLargo_y_rar0;
 		x.g = 5;
 		int a = x.g;
-		int t = x.m();
+		//int t = x.m();
+		//Class2 lala = y.class2;
+		//lala = x.class2;
 		//x.n();
 	}
 	

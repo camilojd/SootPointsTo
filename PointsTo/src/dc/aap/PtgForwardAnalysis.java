@@ -166,12 +166,27 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		// Borramos lo que sea que tenga x
 		in.locals.put(x, new HashSet<String>());
 		
-		for (String a : in.locals.get(y)){
-			for (Edge n : in.edges) {
-				if (n.vSource.equals(a) && n.field.equals(f))
-					out.locals.get(x).add(n.vTarget);
-			}
+		// R' = R U { (n,f,ln) | n in L(y) }
+		for (String n : in.locals.get(y)){
+			String ln = "l_" + n;
+			out.nodes.add(ln);
+			Edge e = new Edge(n, f, ln);
+			out.r_edges.add(e);
 		}
+		
+		// L'(x) = { ln }
+		String ln = "l_" + x;
+		out.nodes.add(ln);
+		out.locals.get(x).clear();
+		out.locals.get(x).add(ln);
+		
+		//Codigo Ejercicio 1
+		//for (String a : in.locals.get(y)){
+		//	for (Edge n : in.edges) {
+		//		if (n.vSource.equals(a) && n.field.equals(f))
+		//			out.locals.get(x).add(n.vTarget);
+		//	}
+		//}
 
 	}
 	
@@ -249,11 +264,13 @@ class FlowInfo {
 	FlowInfo() {
 		nodes = new HashSet<String>();
 		edges = new HashSet<Edge>();
+		r_edges = new HashSet<Edge>();
 		locals = new HashMap<String, Set<String> >();
 		wrongs = new HashSet<String>();
 	}
 	public Set<String> nodes;
 	public Set<Edge> edges;
+	public Set<Edge> r_edges;
 	public Map<String, Set<String> > locals;
 	public Set<String> wrongs;
 
@@ -261,6 +278,7 @@ class FlowInfo {
 		dest.nodes = this.nodes;
 		//XXX: ANDA???????
 		dest.edges = this.edges;
+		dest.r_edges = this.r_edges;
 		dest.locals = this.locals;
 		dest.wrongs = this.wrongs;
 	}
@@ -281,6 +299,10 @@ class FlowInfo {
 		}
 		
 		for(Edge e : edges) {
+			writer.println("\"" + e.vSource + "\"" + "->" + "\"" + e.vTarget + "\"" + "[label=" + "\"" + e.field + "\"" + "]");
+		}
+		
+		for(Edge e : r_edges) {
 			writer.println("\"" + e.vSource + "\"" + "->" + "\"" + e.vTarget + "\"" + "[label=" + "\"" + e.field + "\"" + "]");
 		}
 		
