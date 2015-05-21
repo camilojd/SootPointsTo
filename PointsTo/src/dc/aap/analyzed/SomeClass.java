@@ -9,7 +9,7 @@ public class SomeClass {
 		Class1 c1 = new Class1();
 		Class2 c2 = new Class2();
 		Class2 c22 = new Class2();
-		some.method(c1, c2);
+		some.crazyMethod(c1, c2);
 		Class1 tmpC1 = some.class1At; 
 		tmpC1.class2At = c22;
 		Class2 tmpC2 = tmpC1.class2At;
@@ -17,7 +17,7 @@ public class SomeClass {
 		tmpC1.intAt = 7;
 	}
 	
-	public void method(Class1 cl1, Class2 cl2) {
+	public void crazyMethod(Class1 cl1, Class2 cl2) {
 		class1At = cl1;
 		class2At = cl2;
 	}

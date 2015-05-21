@@ -79,8 +79,10 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 						continue;
 					}
 					for (String localParamNode : sl) {
-						System.out.println(formalParamNode + " - " + localParamNode );
-						out_flow.replaceNode(formalParamNode, localParamNode);
+						//System.out.println(formalParamNode + " - " + localParamNode );
+						//out_flow.replaceNode(formalParamNode, localParamNode);
+						Edge e = new Edge(formalParamNode, "alias", localParamNode);
+						out_flow.edges.add(e);
 					}
 				}
 				
@@ -89,7 +91,9 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 				String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
 				String invocationThisNode =  invocationParamNodes.get(0);
 				for (String localThisNode : out_flow.locals.get(local_this)) {
-					out_flow.replaceNode(invocationThisNode, localThisNode);
+					//out_flow.replaceNode(invocationThisNode, localThisNode);
+					Edge e = new Edge(invocationThisNode, "alias", localThisNode);
+					out_flow.edges.add(e);
 				}
 			}
 		}
