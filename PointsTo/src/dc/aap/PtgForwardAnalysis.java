@@ -1,12 +1,16 @@
 package dc.aap;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
 import soot.*;
 import soot.tagkit.*;
 import soot.jimple.*;
+import soot.jimple.internal.ImmediateBox;
+import soot.jimple.internal.JimpleLocalBox;
 import soot.Body;
 import soot.SootMethod;
 import soot.Unit;
@@ -41,7 +45,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			System.out.println("Es un parametro");
 			String formalParam = d.getDefBoxes().get(0).getValue().toString();
 			String paramNode = "parameter_" + formalParam;
-			out_flow.nodes.add(paramNode);
+			out_flow.p_nodes.add(paramNode);
 			Set<String> s = new HashSet<String>();
 			s.add(paramNode);
 			out_flow.locals.put(formalParam, s);
@@ -56,10 +60,36 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 				System.out.println("TODO: <init> Es una invocacion de un constructor");
 			} else {
 				Body b = method.retrieveActiveBody();
-				//System.out.println(method.getP);
 				UnitGraph g = new BriefUnitGraph(b);
 				PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
-				analysis.global.mergeMethod(this.global);
+				
+				// Saco primero los parametros formales y luego hago el merge.
+				String id = IdGenerator.GenerateId();
+				List<String> invocationParamNodes = getInvocationParamNodes(analysis, id);
+				analysis.global.mergeMethod(out_flow, id);
+				
+				// Se reemplazan los parametros de la invocacion
+				List<Value> args = invoke.getArgs();		
+				for (int i = 1; i < invocationParamNodes.size(); i++) {
+					String formalParamNode = out_flow.p_nodes.get(i);
+					String localArg = args.get(i-1).toString();
+					Set<String> sl = out_flow.locals.get(localArg);
+					if (sl == null) {
+						System.out.println("Error, no se encontro el key " + localArg + " en locals.");
+						continue;
+					}
+					for (String localParamNode : sl) {
+						System.out.println(formalParamNode + " - " + localParamNode );
+						out_flow.replaceNode(formalParamNode, localParamNode);
+					}
+				}
+				
+				// Se reemplaza el this.
+				//Quizas hay una forma mas facil :-P
+				String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
+				//String localThisNode = out_flow.locals.get(local_this);
+				String invocationThisNode =  invocationParamNodes.get(0);
+			    
 			}
 		}
 		
@@ -121,11 +151,21 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		}
 
 		out_flow.toDotFile();
-		global.merge(out_flow);
-		System.out.println(global);
+		System.out.println(out_flow);
+		
+		//global.merge(out_flow);
+		out_flow.merge(global);
 		System.out.println("================");
 	}
 	
+	private List<String> getInvocationParamNodes(PtgForwardAnalysis analysis, String id) {
+		List<String> retNodes = new ArrayList<String>();
+		for (String n : analysis.global.p_nodes) {
+			retNodes.add(id + "_" + n);
+		}
+		return retNodes;
+	}
+
 	protected void proc_new(FlowInfo in, Unit d, FlowInfo out) {
 		Value right = d.getUseBoxes().get(0).getValue();
 		Value left = d.getDefBoxes().get(0).getValue();
@@ -146,6 +186,9 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		//   x --> {A_p}
 		HashSet<String> vNameSet = new HashSet<String>();
 		vNameSet.add(vName);
+		
+		System.out.println("Se pone en locals - L:" + left.toString() + " N: " + vNameSet);
+		
 		out.locals.put(left.toString(), vNameSet);
 	}
 	

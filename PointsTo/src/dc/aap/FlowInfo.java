@@ -2,8 +2,10 @@ package dc.aap;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -14,7 +16,10 @@ public class FlowInfo {
 		r_edges = new HashSet<Edge>();
 		locals = new HashMap<String, Set<String> >();
 		wrongs = new HashSet<String>();
+		p_nodes = new ArrayList<String>();
 	}
+
+	public List<String> p_nodes;
 	public Set<String> nodes;
 	public Set<Edge> edges;
 	public Set<Edge> r_edges;
@@ -23,14 +28,17 @@ public class FlowInfo {
 
 	public void merge(FlowInfo dest){
 		dest.nodes.addAll(this.nodes);
+		dest.p_nodes.addAll(this.nodes);
 		dest.edges.addAll(this.edges);
 		dest.r_edges.addAll(this.r_edges);
 		dest.locals.putAll(this.locals);
 		dest.wrongs.addAll(this.wrongs);
 	}
 	
-	public void mergeMethod(FlowInfo dest){
-		String id = IdGenerator.GenerateId();
+	public void mergeMethod(FlowInfo dest, String id){
+		for (String n : this.p_nodes) {
+			dest.p_nodes.add(id + "_" + n);
+		}
 		for (String n : this.nodes) {
 			dest.nodes.add(id + "_" + n);
 		}
@@ -53,6 +61,7 @@ public class FlowInfo {
 	}
 	
 	public void copy(FlowInfo dest) {
+		dest.p_nodes = this.p_nodes;
 		dest.nodes = this.nodes;
 		//XXX: ANDA???????
 		dest.edges = this.edges;
@@ -108,5 +117,48 @@ public class FlowInfo {
 		
 		writer.println("}");
 		writer.close();
+	}
+
+	public void replaceNode(String formalParamNode, String localParamNode) {
+		Set<Edge> edgesToRemove = new HashSet<Edge>();
+		Set<Edge> edgesToAdd = new HashSet<Edge>();;
+		for (Edge e : edges) {
+			Edge replace = null;
+			if (e.vSource.equals(formalParamNode)) {
+				replace = new Edge(localParamNode, e.field, e.vTarget);
+			}
+			if (e.vTarget.equals(formalParamNode)) {
+				replace = new Edge(e.vSource, e.field, localParamNode);
+			}
+			if (replace != null) {
+				edgesToRemove.add(e);
+				edgesToAdd.add(replace);	
+			}
+		}
+		edges.removeAll(edgesToRemove);
+		edges.addAll(edgesToAdd);
+		
+		Set<Edge> r_edgesToRemove = new HashSet<Edge>();
+		Set<Edge> r_edgesToAdd = new HashSet<Edge>();;
+		for (Edge e : r_edges) {
+			Edge replace = null;
+			if (e.vSource.equals(formalParamNode)) {
+				replace = new Edge(localParamNode, e.field, e.vTarget);
+			}
+			if (e.vTarget.equals(formalParamNode)) {
+				replace = new Edge(e.vSource, e.field, localParamNode);
+			}
+			r_edgesToRemove.add(e);
+			r_edgesToAdd.add(replace);
+		}
+		r_edges.removeAll(r_edgesToRemove);
+		r_edges.addAll(r_edgesToAdd);
+		
+		for(Map.Entry<String, Set<String>> l : locals.entrySet()) {
+			if (l.getValue().contains(formalParamNode)){
+				l.getValue().remove(formalParamNode);
+				l.getValue().add(localParamNode);
+			}
+		}
 	}
 }
