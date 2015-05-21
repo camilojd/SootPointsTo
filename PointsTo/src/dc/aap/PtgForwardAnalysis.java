@@ -87,9 +87,10 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 				// Se reemplaza el this.
 				//Quizas hay una forma mas facil :-P
 				String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
-				//String localThisNode = out_flow.locals.get(local_this);
 				String invocationThisNode =  invocationParamNodes.get(0);
-			    
+				for (String localThisNode : out_flow.locals.get(local_this)) {
+					out_flow.replaceNode(invocationThisNode, localThisNode);
+				}
 			}
 		}
 		

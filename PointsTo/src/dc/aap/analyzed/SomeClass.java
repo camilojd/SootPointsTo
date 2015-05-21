@@ -10,9 +10,11 @@ public class SomeClass {
 		Class2 c2 = new Class2();
 		Class2 c22 = new Class2();
 		some.method(c1, c2);
-		some.class1At.class2At = c22;
-		some.class1At.class2At.intAt = 3;
-		some.class1At.intAt = 7;
+		Class1 tmpC1 = some.class1At; 
+		tmpC1.class2At = c22;
+		Class2 tmpC2 = tmpC1.class2At;
+		tmpC2.intAt = 3;
+		tmpC1.intAt = 7;
 	}
 	
 	public void method(Class1 cl1, Class2 cl2) {
