@@ -16,20 +16,15 @@ public class StandaloneMain {
 
 	public static void main(String[] args) {		
 		File someClassFile = new File("./bin/").getAbsoluteFile();
-     	Scene.v().setSootClassPath(Scene.v().getSootClassPath() + File.pathSeparator + someClassFile);
-		SootClass c = Scene.v().loadClassAndSupport("dc.aap.analyzed.SomeClass");
-		c.setApplicationClass();
-		SootMethod m = c.getMethodByName("entryPoint");
 		soot.options.Options.v().set_keep_line_number(true);
-		//soot.options.Options.v().print_tags_in_output();
+		Scene.v().setSootClassPath(Scene.v().getSootClassPath() + File.pathSeparator + someClassFile);
+		SootClass c = Scene.v().loadClassAndSupport("dc.aap.analyzed.SomeClass");	
+		c.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
-		
+		SootMethod m = c.getMethodByName("entryPoint");
 		Body b = m.retrieveActiveBody();
 		System.out.println(b);
 		UnitGraph g = new BriefUnitGraph(b);
 		PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
-//		for (Unit u : g) {
-//			
-//		}
 	}	
 }

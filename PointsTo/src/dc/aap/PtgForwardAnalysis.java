@@ -1,31 +1,27 @@
 package dc.aap;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Map;
+
 import soot.*;
 import soot.tagkit.*;
-import org.apache.commons.lang3.builder.*;
 import soot.jimple.*;
+import soot.Body;
+import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
+import soot.toolkits.graph.UnitGraph;
 import soot.toolkits.scalar.ForwardFlowAnalysis;
 
 public class PtgForwardAnalysis extends ForwardFlowAnalysis{
+
+	public FlowInfo global;
 	
-	private int counter = 0;
-	public String GenerateId() {
-		counter++;
-		return String.valueOf(counter);
-	}
-	
-	public PtgForwardAnalysis(DirectedGraph<Unit> graph) {
-		super(graph);
+	public PtgForwardAnalysis(DirectedGraph<Unit> _graph) {
+		super(_graph);
 		doAnalysis();
 	}
 
@@ -52,7 +48,19 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		}
 		
 		if (d instanceof InvokeStmt) {
-			System.out.println("TODO: Es una invocacion");
+			InvokeExpr invoke = ((InvokeStmt) d).getInvokeExpr();
+			SootMethod method = invoke.getMethod();
+			//String className = invoke.getMethodRef().declaringClass().getName();
+
+			if (method.getName().equals("<init>")) {
+				System.out.println("TODO: <init> Es una invocacion de un constructor");
+			} else {
+				Body b = method.retrieveActiveBody();
+				//System.out.println(method.getP);
+				UnitGraph g = new BriefUnitGraph(b);
+				PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
+				analysis.global.mergeMethod(this.global);
+			}
 		}
 		
 		if (d instanceof ReturnVoidStmt) {
@@ -111,8 +119,10 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 				proc_ref_eq_ref(in_flow, def, use, out_flow);
 			}
 		}
-		
-		out_flow.toDotFile();	
+
+		out_flow.toDotFile();
+		global.merge(out_flow);
+		System.out.println(global);
 		System.out.println("================");
 	}
 	
@@ -171,7 +181,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		in.locals.put(x, new HashSet<String>());
 		
 		// Para ln "libre".
-		String ln = "l_" + GenerateId() + "_" + y;
+		String ln = "l_" + IdGenerator.GenerateId() + "_" + y;
 		out.nodes.add(ln);
 
 		// R' = R U { (n,f,ln) | n in L(y) }
@@ -211,7 +221,8 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 	
 	@Override
 	protected Object newInitialFlow() {
-		return new FlowInfo();
+		global = new FlowInfo();
+		return global;
 	}
 
 	@Override
@@ -241,95 +252,4 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 		((FlowInfo)source).copy((FlowInfo)dest);
 	}
 
-}
-
-class FlowInfo {
-	FlowInfo() {
-		nodes = new HashSet<String>();
-		edges = new HashSet<Edge>();
-		r_edges = new HashSet<Edge>();
-		locals = new HashMap<String, Set<String> >();
-		wrongs = new HashSet<String>();
-	}
-	public Set<String> nodes;
-	public Set<Edge> edges;
-	public Set<Edge> r_edges;
-	public Map<String, Set<String> > locals;
-	public Set<String> wrongs;
-
-	public void copy(FlowInfo dest) {
-		dest.nodes = this.nodes;
-		//XXX: ANDA???????
-		dest.edges = this.edges;
-		dest.r_edges = this.r_edges;
-		dest.locals = this.locals;
-		dest.wrongs = this.wrongs;
-	}
-	public void toDotFile() {
-		PrintWriter writer;
-		try {
-			writer = new PrintWriter("file.dot");
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return;
-		}
-		writer.println("digraph {");
-		
-		for (Map.Entry<String, Set<String>> local : locals.entrySet()) {
-			for (String node : local.getValue() )
-			writer.println("\"" + local.getKey() + "\"" + "->" + "\"" + node + "\"");
-		}
-		
-		for(Edge e : edges) {
-			writer.println("\"" + e.vSource + "\"" + "->" + "\"" + e.vTarget + "\"" + "[label=" + "\"" + e.field + "\"" + "]");
-		}
-		
-		for(Edge e : r_edges) {
-			writer.println("\"" + e.vSource + "\"" + "->" + "\"" + e.vTarget + "\"" + "[label=" + "\"" + e.field + "\"" + "]");
-		}
-		
-		writer.println("}");
-		writer.close();
-	}
-}
-
-class Edge {
-	Edge(String source, String field, String target) {
-		vSource = source;
-		vTarget = target;
-		this.field = field;
-	}
-	String vSource;
-	String vTarget;
-	String field;
-	
-	@Override
-    public int hashCode() {
-        return new HashCodeBuilder(17, 31).
-            append(vSource).
-            append(vTarget).
-            append(field).
-            toHashCode();
-    }
-	
-	@Override
-    public boolean equals(Object obj) {
-       if (!(obj instanceof Edge))
-            return false;
-        if (obj == this)
-            return true;
-
-        Edge edge = (Edge) obj;
-        return new EqualsBuilder().
-            append(vTarget, edge.vTarget).
-            append(vSource, edge.vSource).
-            append(field, edge.field).
-            isEquals();
-    }
-
-	@Override
-	public String toString() {
-		return "(" + vSource + "," + field  + "," + vTarget + ")" ;  
-	}
 }
