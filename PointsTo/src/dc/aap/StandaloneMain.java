@@ -18,6 +18,7 @@ public class StandaloneMain {
 		File someClassFile = new File("./bin/").getAbsoluteFile();
 		soot.options.Options.v().set_keep_line_number(true);
 		Scene.v().setSootClassPath(Scene.v().getSootClassPath() + File.pathSeparator + someClassFile);
+		Scene.v().addBasicClass("java.lang.Object",SootClass.BODIES);
 		SootClass c = Scene.v().loadClassAndSupport("dc.aap.analyzed.SomeClass");	
 		c.setApplicationClass();
 		Scene.v().loadNecessaryClasses();

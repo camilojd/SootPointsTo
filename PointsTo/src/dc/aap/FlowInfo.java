@@ -50,13 +50,13 @@ public class FlowInfo {
 			Edge ne = new Edge(id + "_" + e.vSource, e.field, id + "_" + e.vTarget);
 			dest.r_edges.add(ne);
 		}
-		for (Map.Entry<String, Set<String>> local : this.locals.entrySet()) {
-			Set<String> nodos = new HashSet<String>();
-			for (String n : local.getValue()) {
-				nodos.add(id + "_" + n);
-			}
-			dest.locals.put(id + "_" + local.getKey(), nodos);
-		}
+		//for (Map.Entry<String, Set<String>> local : this.locals.entrySet()) {
+		//	Set<String> nodos = new HashSet<String>();
+		//	for (String n : local.getValue()) {
+		//		nodos.add(id + "_" + n);
+		//	}
+		//	dest.locals.put(id + "_" + local.getKey(), nodos);
+		//}
 		dest.wrongs.addAll(this.wrongs);
 	}
 	
@@ -160,5 +160,25 @@ public class FlowInfo {
 				l.getValue().add(localParamNode);
 			}
 		}
+	}
+
+	public void mergeNodes() {
+		Set<Edge> edgesToRemove = new HashSet<Edge>();
+		for (Edge edgeToRemove : r_edges) {
+			String n = edgeToRemove.vSource;
+			String nodeToRemove = edgeToRemove.vTarget;
+			for (Edge realEdge : edges) {
+				if (realEdge.vSource.equals(n) && realEdge.field.equals(edgeToRemove.field)) {
+					for (Map.Entry<String, Set<String>> l : locals.entrySet()) {
+						if (l.getValue().contains(nodeToRemove)) {
+							l.getValue().remove(nodeToRemove);
+							edgesToRemove.add(edgeToRemove);
+							l.getValue().add(realEdge.vTarget);
+						}
+					}
+				}
+			}
+		}
+		r_edges.removeAll(edgesToRemove);
 	}
 }

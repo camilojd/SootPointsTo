@@ -2,16 +2,15 @@ package dc.aap;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
 import soot.*;
 import soot.tagkit.*;
 import soot.jimple.*;
-import soot.jimple.internal.ImmediateBox;
-import soot.jimple.internal.JimpleLocalBox;
 import soot.Body;
+import soot.Scene;
+import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -59,9 +58,12 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			if (method.getName().equals("<init>")) {
 				System.out.println("TODO: <init> Es una invocacion de un constructor");
 			} else {
+				//Scene.v().addBasicClass(invoke.getMethodRef().declaringClass().getName(), SootClass.BODIES);
+				//System.out.println(invoke.getMethodRef().declaringClass().getName());
 				Body b = method.retrieveActiveBody();
 				UnitGraph g = new BriefUnitGraph(b);
 				PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
+				
 				
 				// Saco primero los parametros formales y luego hago el merge.
 				String id = IdGenerator.GenerateId();
@@ -94,7 +96,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 					out_flow.replaceNode(invocationThisNode, localThisNode);
 					//Edge e = new Edge(invocationThisNode, "alias", localThisNode);
 					//out_flow.edges.add(e);
-				}
+				}		
 			}
 		}
 		
@@ -155,11 +157,11 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis{
 			}
 		}
 
-		out_flow.toDotFile();
-		System.out.println(out_flow);
-		
-		//global.merge(out_flow);
+		out_flow.mergeNodes();
 		out_flow.merge(global);
+		
+		out_flow.toDotFile();
+		//System.out.println(out_flow);
 		System.out.println("================");
 	}
 	
