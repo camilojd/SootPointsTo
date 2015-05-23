@@ -2,8 +2,8 @@ package dc.aap;
 
 public class IdGenerator {
 	static int counter = 0;
-	public static String GenerateId() {
+	public static int GenerateId() {
 		counter++;
-		return String.valueOf(counter);
+		return counter;
 	}
 }

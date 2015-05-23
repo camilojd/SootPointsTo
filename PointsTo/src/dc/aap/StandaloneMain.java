@@ -2,6 +2,7 @@ package dc.aap;
 
 import java.io.File;
 
+import dc.aap.analyzed.SomeClass.Class1;
 import soot.Body;
 import soot.Scene;
 import soot.SootClass;
@@ -19,6 +20,8 @@ public class StandaloneMain {
 		soot.options.Options.v().set_keep_line_number(true);
 		Scene.v().setSootClassPath(Scene.v().getSootClassPath() + File.pathSeparator + someClassFile);
 		Scene.v().addBasicClass("java.lang.Object",SootClass.BODIES);
+		Scene.v().addBasicClass("dc.aap.analyzed.SomeClass$Class1", SootClass.BODIES);
+		Scene.v().addBasicClass("dc.aap.analyzed.SomeClass$Class2", SootClass.BODIES);
 		SootClass c = Scene.v().loadClassAndSupport("dc.aap.analyzed.SomeClass");	
 		c.setApplicationClass();
 		Scene.v().loadNecessaryClasses();
@@ -27,5 +30,7 @@ public class StandaloneMain {
 		System.out.println(b);
 		UnitGraph g = new BriefUnitGraph(b);
 		PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
+		analysis.pointsToGraph.toDotFile();
+		//System.out.println(out_flow);
 	}	
 }
