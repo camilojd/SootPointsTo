@@ -7,6 +7,7 @@ import java.util.HashSet;
 
 import soot.*;
 import soot.tagkit.*;
+import soot.JastAddJ.Literal;
 import soot.jimple.*;
 import soot.jimple.internal.InvokeExprBox;
 import soot.jimple.internal.JVirtualInvokeExpr;
@@ -101,6 +102,10 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 			for (int i = 1; i < internalPtg.p_nodes.size(); i++) {
 				String formalParamNode = internalPtg.p_nodes.get(i);
 				String localArg = args.get(i-1).toString();
+				if (!out_flow.locals.containsKey(localArg)) {
+					// Debe ser un literal, no se hace nada.
+					continue;
+				}
 				Set<String> sl = out_flow.locals.get(localArg);
 				for (String localParamNode : sl) {
 					out_flow.replaceNode(formalParamNode, localParamNode);
@@ -108,12 +113,15 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 			}
 		}
 		
-		// Se reemplaza el this.
-		//Quizas hay una forma mas facil de obtenerlo :-P
-		String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
-		String invocationThisNode =  internalPtg.p_nodes.get(0);
-		for (String localThisNode : out_flow.locals.get(local_this)) {
-			out_flow.replaceNode(invocationThisNode, localThisNode);
+		// Si es static no tiene this.
+		if (!invoke.getMethodRef().isStatic()) {
+			// Se reemplaza el this.
+			//Quizas hay una forma mas facil de obtenerlo :-P
+			String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
+			String invocationThisNode =  internalPtg.p_nodes.get(0);
+			for (String localThisNode : out_flow.locals.get(local_this)) {
+				out_flow.replaceNode(invocationThisNode, localThisNode);
+			}
 		}
 
 		return internalPtg.returnNodes;
@@ -217,7 +225,7 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 		// R' = R U { (n,f,ln) | n in L(y) }
 		for (String n : out.locals.get(y)){
 			Edge e = new Edge(n, f, ln);
-			out.l_edges.add(e);
+			out.r_edges.add(e);
 		}
 		
 		// L'(x) = { ln }

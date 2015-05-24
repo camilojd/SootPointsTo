@@ -12,6 +12,12 @@ public class SomeClass {
 		some.class2At = c2;
 		Class2 c22 = new Class2();
 		c22 = some.crazyMethod(c1);
+		int x = pepe(5, 3);
+		some.pepe = x;
+	}
+	
+	public static int pepe(int x, int y) {
+		return x;
 	}
 	
 	public SomeClass(){
