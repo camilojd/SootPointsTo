@@ -30,7 +30,7 @@ public class StandaloneMain {
 		System.out.println(b);
 		UnitGraph g = new BriefUnitGraph(b);
 		PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
-		analysis.pointsToGraph.toDotFile();
+		analysis.getPointsToGraph().toDotFile();
 		//System.out.println(out_flow);
 	}	
 }

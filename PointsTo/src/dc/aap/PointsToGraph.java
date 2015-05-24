@@ -16,6 +16,7 @@ public class PointsToGraph {
 	public Set<Edge> l_edges;
 	public Map<String, Set<String> > locals;
 	public Set<String> wrongs;
+	public Set<String> returnNodes;
 
 	PointsToGraph() {
 		nodes = new HashSet<String>();
@@ -24,12 +25,17 @@ public class PointsToGraph {
 		l_edges = new HashSet<Edge>();
 		locals = new HashMap<String, Set<String> >();
 		wrongs = new HashSet<String>();
+		returnNodes = new HashSet<String>();
 	}
 
 	public void merge(PointsToGraph dest){
 		dest.nodes.addAll(this.nodes);
-		dest.p_nodes.addAll(this.nodes);
 		dest.edges.addAll(this.edges);
+		for (String n : this.p_nodes) {
+			if (!dest.p_nodes.contains(n)) {
+				dest.p_nodes.add(n);
+			}
+		}
 		dest.l_edges.addAll(this.l_edges);
 		dest.locals.putAll(this.locals);
 		dest.wrongs.addAll(this.wrongs);
@@ -59,6 +65,9 @@ public class PointsToGraph {
 		for (Edge e : this.l_edges) {
 			Edge ne = new Edge(prefix + "_" + e.vSource, e.field, prefix + "_" + e.vTarget);
 			dest.l_edges.add(ne);
+		}
+		for (String n : this.returnNodes) {
+			dest.returnNodes.add(prefix + "_" + n);
 		}
 		dest.wrongs.addAll(this.wrongs);
 		return dest;
@@ -93,6 +102,7 @@ public class PointsToGraph {
 			if (e.vTarget.equals(formalParamNode)) {
 				replace = new Edge(e.vSource, e.field, localParamNode);
 			}
+			if (replace == null) continue;
 			r_edgesToRemove.add(e);
 			r_edgesToAdd.add(replace);
 		}
@@ -145,6 +155,12 @@ public class PointsToGraph {
 		for(Edge e : l_edges) {
 			s = s.concat("\t(" + e.vSource + ", " + e.field + ", " + e.vTarget + ")\n");
 		}
+		
+		s = s.concat("P_NODES: \n");
+		for (String n : p_nodes) {
+			s = s.concat("\t" + n + "\n");
+		}
+		
 		return s;
 	}
 	
@@ -175,6 +191,4 @@ public class PointsToGraph {
 		writer.println("}");
 		writer.close();
 	}
-
-
 }

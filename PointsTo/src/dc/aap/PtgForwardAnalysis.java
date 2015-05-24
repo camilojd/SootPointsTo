@@ -8,6 +8,8 @@ import java.util.HashSet;
 import soot.*;
 import soot.tagkit.*;
 import soot.jimple.*;
+import soot.jimple.internal.InvokeExprBox;
+import soot.jimple.internal.JVirtualInvokeExpr;
 import soot.Body;
 import soot.SootMethod;
 import soot.Unit;
@@ -19,7 +21,7 @@ import soot.toolkits.scalar.ForwardFlowAnalysis;
 
 public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 
-	public PointsToGraph pointsToGraph;
+	private PointsToGraph pointsToGraph;
 	
 	public PtgForwardAnalysis(DirectedGraph<Unit> graph) {
 		super(graph);
@@ -59,61 +61,62 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 		
 		if (d instanceof IdentityStmt) {
 			processParameterDeclarationStmt(d, out_flow);
-		}
-		
-		if (d instanceof InvokeStmt) {
-			processInvocationStmt(d, out_flow);
-		}
-		
-		if (d instanceof ReturnStmt) {
-			System.out.println("TODO: Es un return");
-		}
-				
-		if (d instanceof AssignStmt) {
-			proccessAssignmentStmt(d, out_flow);
+		} else if (d instanceof InvokeStmt) {
+			InvokeExpr invoke = ((InvokeStmt) d).getInvokeExpr();
+			if (invoke.getMethod().getName().equals("<init>")) {
+				processNotHandleStmt(d, out_flow);
+			} else {
+				processInvocationStmt(invoke, out_flow);
+			}
+		} else if (d instanceof AssignStmt) {
+			processAssignmentStmt(d, out_flow);
+		} else if (d instanceof ReturnStmt){
+			processReturnStmt(d, out_flow);
+		} else {
+			processNotHandleStmt(d, out_flow);
 		}
 			
 		out_flow.mergeNodes();
 		out_flow.merge(pointsToGraph);
 	}
 
-	private void processInvocationStmt(Unit d, PointsToGraph out_flow) {
-		InvokeExpr invoke = ((InvokeStmt) d).getInvokeExpr();
-		SootMethod method = invoke.getMethod();
+	private void processReturnStmt(Unit d, PointsToGraph out_flow) {
+		Set<String> ls = out_flow.locals.get(d.getUseBoxes().get(0).getValue().toString());
+		out_flow.returnNodes = ls;
+	}
 
-		if (method.getName().equals("<init>")) {
-			processNotHandleStmt(d, out_flow);
-		} else {
-			Body b = method.retrieveActiveBody();
-			UnitGraph g = new BriefUnitGraph(b);
-			PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
-			
-			// Saco primero los parametros formales y luego hago el merge.
-			int id = IdGenerator.GenerateId();
-			PointsToGraph internalPtg = analysis.pointsToGraph.getPtgWithoutLocalsWithPrefix(id);
-			internalPtg.merge(out_flow);
-			
-			// Se reemplazan los parametros de la invocacion
-			List<Value> args = invoke.getArgs();
-			if (args.size() > 0) {
-				for (int i = 1; i < internalPtg.p_nodes.size(); i++) {
-					String formalParamNode = internalPtg.p_nodes.get(i);
-					String localArg = args.get(i-1).toString();
-					Set<String> sl = out_flow.locals.get(localArg);
-					for (String localParamNode : sl) {
-						out_flow.replaceNode(formalParamNode, localParamNode);
-					}
+	private Set<String> processInvocationStmt(InvokeExpr invoke, PointsToGraph out_flow) {
+		Body b = invoke.getMethod().retrieveActiveBody();
+		UnitGraph g = new BriefUnitGraph(b);
+		PtgForwardAnalysis analysis = new PtgForwardAnalysis(g);
+		
+		// Saco primero los parametros formales y luego hago el merge.
+		int id = IdGenerator.GenerateId();
+		PointsToGraph internalPtg = analysis.pointsToGraph.getPtgWithoutLocalsWithPrefix(id);
+		internalPtg.merge(out_flow);
+		
+		// Se reemplazan los parametros de la invocacion
+		List<Value> args = invoke.getArgs();
+		if (args.size() > 0) {
+			for (int i = 1; i < internalPtg.p_nodes.size(); i++) {
+				String formalParamNode = internalPtg.p_nodes.get(i);
+				String localArg = args.get(i-1).toString();
+				Set<String> sl = out_flow.locals.get(localArg);
+				for (String localParamNode : sl) {
+					out_flow.replaceNode(formalParamNode, localParamNode);
 				}
 			}
-			
-			// Se reemplaza el this.
-			//Quizas hay una forma mas facil :-P
-			String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
-			String invocationThisNode =  internalPtg.p_nodes.get(0);
-			for (String localThisNode : out_flow.locals.get(local_this)) {
-				out_flow.replaceNode(invocationThisNode, localThisNode);
-			}
 		}
+		
+		// Se reemplaza el this.
+		//Quizas hay una forma mas facil de obtenerlo :-P
+		String local_this = invoke.getUseBoxes().get(invoke.getArgCount()).getValue().toString();
+		String invocationThisNode =  internalPtg.p_nodes.get(0);
+		for (String localThisNode : out_flow.locals.get(local_this)) {
+			out_flow.replaceNode(invocationThisNode, localThisNode);
+		}
+
+		return internalPtg.returnNodes;
 	}
 
 	private void processParameterDeclarationStmt(Unit d, PointsToGraph out_flow) {
@@ -121,7 +124,6 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 		// Cuando le da nombre a los parametros de la funcion.
 		// Def: JimpleLocalBox(i0), Use: IdentityRefBox(@parameter0: int)
 		// Creo que solo interesa el Def.
-		System.out.println("Es un parametro");
 		String formalParam = d.getDefBoxes().get(0).getValue().toString();
 		String paramNode = "parameter_" + formalParam;
 		out_flow.p_nodes.add(paramNode);
@@ -130,49 +132,42 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 		out_flow.locals.put(formalParam, s);
 	}
 
-	private void proccessAssignmentStmt(Unit d, PointsToGraph out_flow) {
-		// TODO Auto-generated method stub
+	private void processAssignmentStmt(Unit d, PointsToGraph out_flow) {
 		// Si no tenemos lado iz o der, lo ignoramos
 		if (d.getUseBoxes().isEmpty() || d.getDefBoxes().isEmpty())
 			return;
 		
 		boolean rightField = false;
 		boolean leftField = false;
-
+		
 		for (ValueBox i: d.getUseBoxes()) {
 			if (i.getValue() instanceof FieldRef) {
 				rightField = true;
 			}
 		}
-		
+
 		for (ValueBox i: d.getDefBoxes()) {
 			if (i.getValue() instanceof FieldRef) {
 				leftField = true;
 			}
 		}
-		
+
 		Value expr = d.getUseBoxes().get(0).getValue();
 		if (expr instanceof AnyNewExpr) {
-			System.out.println("Es un new");
 			processNewAssignment(d, out_flow);
 		} else if (expr instanceof InvokeExpr) {
-			System.out.println("Es un assign x = m()");
-			processNotHandleStmt(d, out_flow);
+			processInvocationAssignment(d, (InvokeExpr)expr, out_flow);
 		} else if (leftField && rightField) {
-			System.out.println("Es un assign x.f = y.f");
 			processReferenceToReferenceAssignment(d, out_flow);
 		} else if (leftField) {
-			System.out.println("Es un assign x.f = 5 o y");
 			processFieldToReferenceOrLiteralAssignment(d, out_flow);
 		} else if (rightField) {
-			System.out.println("Es un assign x = y.f");
 			processFieldToReferenceAssignment(d, out_flow);
 		} else if (!leftField && !rightField) {
-			System.out.println("Es un assign x = y o cte");
 			processReferenceToReferenceAssignment(d, out_flow);
 		}
 	}
-	
+
 	private void processNotHandleStmt(Unit d, PointsToGraph out) {
 		out.wrongs.add(d.toString());
 	}
@@ -228,6 +223,13 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 		// L'(x) = { ln }
 		out.locals.get(x).add(ln);		
 	}
+
+	private void processInvocationAssignment(Unit d, InvokeExpr expr, PointsToGraph out_flow) {
+		// int x = y.m();
+		String x = d.getDefBoxes().get(0).getValue().toString();
+		Set<String> retNodes = processInvocationStmt(expr, out_flow);
+		out_flow.locals.put(x, retNodes);
+	}
 	
 	private void processFieldToReferenceOrLiteralAssignment(Unit d, PointsToGraph out) {
 		// Es una instruccion de la forma: x.f = y
@@ -254,5 +256,9 @@ public class PtgForwardAnalysis extends ForwardFlowAnalysis {
 		String f = f_splice[f_splice.length - 1];
 		f = f.substring(0, f.length() - 1);
 		return f;
+	}
+
+	public PointsToGraph getPointsToGraph() {
+		return pointsToGraph;
 	}
 }

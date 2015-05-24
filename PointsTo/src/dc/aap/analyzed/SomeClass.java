@@ -3,30 +3,26 @@ package dc.aap.analyzed;
 public class SomeClass {
 	public Class1 class1At;
 	public Class2 class2At;
+	public int pepe;
 
 	public static void entryPoint() {
 		SomeClass some = new SomeClass();
 		Class1 c1 = new Class1();
 		Class2 c2 = new Class2();
-		Class2 c22 = new Class2();
-		some.crazyMethod(c1, c2);
-		some.class1At = c1;
 		some.class2At = c2;
-		Class1 tmpC1 = some.class1At;
-		tmpC1.class2At = c22;
-		Class2 tmpC2 = tmpC1.class2At;
-		tmpC2.intAt = 3;
-		tmpC1.intAt = 7;
+		Class2 c22 = new Class2();
+		c22 = some.crazyMethod(c1);
 	}
 	
 	public SomeClass(){
 		Class1 c1 = new Class1();
 		class1At = c1;
+		pepe = 0;
 	}
 	
-	public void crazyMethod(Class1 cl1, Class2 cl2) {
+	public Class2 crazyMethod(Class1 cl1) {
 		class1At = cl1;
-		class2At = cl2;
+		return class2At;
 	}
 	
 	public static class Class1 {
